@@ -1,0 +1,112 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Shader Files">
+      <UniqueIdentifier>{647e02a2-5aeb-4564-ac43-61ac9364ec19}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="helper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="times.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="mathUtility.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FABRIK.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Constraint.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Segment.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="debug.fs.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="debug.vs.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="gbuffer.fs.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="gbuffer.vs.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="quad.fs.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="quad.vs.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="splat.fs.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="splat.vs.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="stencil.fs.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="stencil.vs.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="basic.fs.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="basic.vs.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="times.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="helper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tree.hh">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tree_util.hh">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="mathUtility.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FABRIK.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Constraint.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Segment.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Object Include="teapot.obj">
+      <Filter>Resource Files</Filter>
+    </Object>
+  </ItemGroup>
+</Project>
