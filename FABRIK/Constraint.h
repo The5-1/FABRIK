@@ -42,8 +42,9 @@ private:
 	glm::vec3 planeNormal;
 
 public:
-	PlaneConstraint(glm::vec3 _planeNormal);
 
+	PlaneConstraint(glm::vec3 _planeNormal);
+	void setPlaneNormal(glm::vec3 _planeNormal);
 	glm::vec3 calcConstraintedPoint(glm::vec3 unconstrainted, Segment current, Segment parent);
 };
 

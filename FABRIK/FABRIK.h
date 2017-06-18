@@ -45,13 +45,13 @@ public:
 
 	//Draw
 	void drawChain(const int program, const float radius, glm::mat4 V, glm::mat4 P);
-	void FABRIK::drawHingeConstraints(const int program, glm::mat4 V, glm::mat4 P);
+	void FABRIK::drawHingeConstraints(const int program, glm::mat4 V, glm::mat4 P, float radius);
 	void FABRIK::drawConstraints(const int program, glm::mat4 V, glm::mat4 P);
 
 	//Calculation
 	void updateChain(vector<glm::vec3> targets);
 	void updatePistonChain(vector<glm::vec3> targets, int iterations);
-	void updateHingeChain(vector<glm::vec3> targets);
+	void updateHingeChain(vector<glm::vec3> targets, float radius);
 	void updateChainWithConstraints(vector<glm::vec3> targets);
 
 	//Full Pack

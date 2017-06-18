@@ -14,8 +14,8 @@ public:
 
 	float length;
 	float basicLength;
-	float piston = 5.0f;
-	float basicPiston = 5.0f;
+	float piston = 2.0f;
+	float basicPiston = 2.0f;
 
 	float angle;
 public:

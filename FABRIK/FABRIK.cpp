@@ -84,7 +84,7 @@ void FABRIK::drawChain(const int program, const float radius, glm::mat4 V, glm::
 	glUseProgram(0);
 }
 
-void FABRIK::drawHingeConstraints(const int program, glm::mat4 V, glm::mat4 P) {
+void FABRIK::drawHingeConstraints(const int program, glm::mat4 V, glm::mat4 P, float radius) {
 	glUseProgram(program);
 	uniform(program, "viewMatrix", V);
 	uniform(program, "projMatrix", P);
@@ -104,7 +104,7 @@ void FABRIK::drawHingeConstraints(const int program, glm::mat4 V, glm::mat4 P) {
 
 			glm::mat4 translate = glm::translate(br->startJoint);
 
-			glm::mat4 scale = glm::scale(glm::vec3(2.0f));
+			glm::mat4 scale = glm::scale(glm::vec3(2*radius));
 
 			glm::mat4 rotation = glm::mat4(r[0][0], r[0][1], r[0][2], 0,
 				r[1][0], r[1][1], r[1][2], 0,
@@ -309,7 +309,7 @@ void FABRIK::updatePistonChain(vector<glm::vec3> targets, int iterations) {
 	}
 }
 
-void FABRIK::updateHingeChain(vector<glm::vec3> targets) {
+void FABRIK::updateHingeChain(vector<glm::vec3> targets, float radius) {
 	glm::vec3 start = chain.begin()->startJoint;
 	int targetNr = 0;
 
@@ -358,7 +358,7 @@ void FABRIK::updateHingeChain(vector<glm::vec3> targets) {
 		
 		//Apply hinge constraint
 		if (chain.parent(br) != NULL) {
-			float maxRadius = 1.0f;
+			float maxRadius = radius;
 			glm::vec3 currentVector = br->endJoint - br->startJoint;
 			glm::vec3 planeNormal = glm::normalize(chain.parent(br)->endJoint - chain.parent(br)->startJoint);
 			//glm::vec3 planeNormal = chain.parent(br)->startJoint - chain.parent(br)->endJoint;
@@ -431,11 +431,11 @@ void FABRIK::updateChainWithConstraints(vector<glm::vec3> targets) {
 
 void FABRIK::updateAndDraw(vector<glm::vec3> targets, const int program, const float radius, glm::mat4 V, glm::mat4 P)
 {
-	//this->updatePistonChain(targets, 10);
-	//this->updateChainWithConstraints(targets);
-	this->updateHingeChain(targets);
-	this->drawChain(program, radius, V, P);
-	
-	//this->drawConstraints(program, V, P);
-	this->drawHingeConstraints(program, V, P);
+	////this->updatePistonChain(targets, 10);
+	////this->updateChainWithConstraints(targets);
+	//this->updateHingeChain(targets);
+	//this->drawChain(program, radius, V, P);
+	//
+	////this->drawConstraints(program, V, P);
+	//this->drawHingeConstraints(program, V, P);
 }

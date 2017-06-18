@@ -131,12 +131,17 @@ PlaneConstraint::PlaneConstraint(glm::vec3 _planeNormal)
 	this->planeNormal = glm::normalize(_planeNormal);
 }
 
+void PlaneConstraint::setPlaneNormal(glm:: vec3 _planeNormal)
+{
+	this->planeNormal = _planeNormal;
+}
+
 glm::vec3 PlaneConstraint::calcConstraintedPoint(glm::vec3 unconstrainted, Segment current, Segment parent)
 {
 	//Web: https://www.maplesoft.com/support/help/Maple/view.aspx?path=MathApps/ProjectionOfVectorOntoPlane
 
 	glm::vec3 currentVector = current.endJoint - current.startJoint;
-	glm::vec3 projectionOnPlane = current.length * glm::normalize(currentVector - glm::dot(currentVector, planeNormal)*planeNormal);
+	glm::vec3 projectionOnPlane = current.length * glm::normalize(currentVector - glm::dot(currentVector, this->planeNormal)*this->planeNormal);
 	glm::vec3 projectionVec = projectionOnPlane + current.startJoint;
 
 	return projectionVec;

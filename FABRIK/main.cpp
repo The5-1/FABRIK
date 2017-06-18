@@ -40,6 +40,12 @@ bool solveIK = false;
 int stepsIK = 10;
 bool writeOnceToConsole = true;
 
+bool fabrikSolver = true;
+bool fabrikConeSolver = false;
+bool fabrikPlaneSolver = false;
+bool fabrikHingeSolver = false;
+bool fabrikPistonSolver = false;
+bool updateChain = true;
 tree<Segment> segmentTree;
 
 cameraSystem cam(1.0f, 1.0f, glm::vec3(3.0f, 16.0f, 22.f));
@@ -79,58 +85,75 @@ bool useConstraints = true;
 
 //FABRIK
 FABRIK *fabrik = 0;
+//Constraints Value
+float angleCone = M_PI / 6;
+glm::vec3 planeNormal = glm::vec3(1.0f, 0.0f, 0.0f);
+float radiusHinge = 1.0f;
+//Constraints
+Constraint *constraintCone = new ConeConstraint(M_PI / 6);
+Constraint *constraintPlane = new PlaneConstraint(planeNormal);
 
 void setupTweakBar() {
 	TwInit(TW_OPENGL_CORE, NULL);
 	tweakBar = TwNewBar("Settings");
-	TwAddVarRW(tweakBar, "Draw rope", TW_TYPE_BOOLCPP, &drawRope, " label='Draw rope' ");
-	TwAddVarRW(tweakBar, "Draw tree", TW_TYPE_BOOLCPP, &drawTree, " label='Draw tree' ");
-	TwAddVarRW(tweakBar, "Use constraints", TW_TYPE_BOOLCPP, &useConstraints, " label='Use constraints' ");
-	TwAddVarRW(tweakBar, "solveIK", TW_TYPE_BOOLCPP, &solveIK, " label='Solve IK' ");
+	//TwBar *bar;
+
+	TwAddVarRW(tweakBar, "No constraint", TW_TYPE_BOOLCPP, &fabrikSolver, " label='No constraint' ");
+	TwAddVarRW(tweakBar, "Cone", TW_TYPE_BOOLCPP, &fabrikConeSolver, " label='Cone' ");
+	TwAddVarRW(tweakBar, "Plane", TW_TYPE_BOOLCPP, &fabrikPlaneSolver, " label='Plane' ");
+	TwAddVarRW(tweakBar, "Hinge", TW_TYPE_BOOLCPP, &fabrikHingeSolver, " label='Hinge' ");
+	TwAddVarRW(tweakBar, "Piston", TW_TYPE_BOOLCPP, &fabrikPistonSolver, " label='Piston' ");
+	//TwAddVarRW(tweakBar, "Draw rope", TW_TYPE_BOOLCPP, &drawRope, " label='Draw rope' ");
+	//TwAddVarRW(tweakBar, "Draw tree", TW_TYPE_BOOLCPP, &drawTree, " label='Draw tree' ");
+	//TwAddVarRW(tweakBar, "Use constraints", TW_TYPE_BOOLCPP, &useConstraints, " label='Use constraints' ");
+	//TwAddVarRW(tweakBar, "solveIK", TW_TYPE_BOOLCPP, &solveIK, " label='Solve IK' ");
+	TwAddVarRW(tweakBar, "Update chain", TW_TYPE_BOOLCPP, &updateChain, " label='Update chain' ");
+
+	TwAddVarRW(tweakBar, "planeNormal", TW_TYPE_DIR3F, &planeNormal, " label='Plane Normal'");
+
+	TwAddVarRW(tweakBar, "radiusHinge", TW_TYPE_FLOAT, &radiusHinge, " label='radius Hinge' min=0 step=0.1 max=100 ");
+
 	TwAddVarRW(tweakBar, "stepsIK", TW_TYPE_INT32, &stepsIK, " label='Steps for IK' ");
 
 	TwAddVarRW(tweakBar, "Rotate", TW_TYPE_BOOLCPP, &autoRotate, " label='Rotate Target' ");
 	TwAddVarRW(tweakBar, "RotSpeed", TW_TYPE_FLOAT, &degreesPerSecond, " label='Rotation Speed' min=0 step=0.1 max=360 ");
 	TwAddVarRW(tweakBar, "SphereHeight", TW_TYPE_FLOAT, &sphereHeight, " label='Target height' min=0 step=0.1 max=100 ");
 
-	TwAddVarRW(tweakBar, "lightDirection", TW_TYPE_DIR3F, &lightDir, "label='Light Direction'");
+	//TwAddVarRW(tweakBar, "lightDirection", TW_TYPE_DIR3F, &lightDir, "label='Light Direction'");
 }
 
 void initiateTestTree() {
 	Constraint *constraint = NULL;
-	//Constraint *constraint = new ConeConstraint(M_PI / 6);
-	//Constraint *constraint = new PlaneConstraint(glm::vec3(1.0f, 0.0f, 0.0f));
-	//Constraint *constraint = new HingeConstraint(1.0f);
 
-	tree<Segment>::iterator root = segmentTree.insert(segmentTree.begin(), Segment(glm::vec3(0, 0, 0), 1, glm::radians(-90.0f), constraint));
+	tree<Segment>::iterator root = segmentTree.insert(segmentTree.begin(), Segment(glm::vec3(0, 0, 0), 3, glm::radians(-90.0f), constraint));
 	root->update();
 
-	tree<Segment>::iterator first = segmentTree.append_child(root, Segment(root->endJoint, 2, glm::radians(-90.0f), constraint));
+	tree<Segment>::iterator first = segmentTree.append_child(root, Segment(root->endJoint, 3, glm::radians(-90.0f), constraint));
 	first->update();
 
 	tree<Segment>::iterator second = segmentTree.append_child(first, Segment(first->endJoint, 3, glm::radians(-135.0f), constraint));
 	second->update();
 
-	tree<Segment>::iterator third = segmentTree.append_child(first, Segment(first->endJoint, 4, glm::radians(-45.0f), constraint));
+	tree<Segment>::iterator third = segmentTree.append_child(first, Segment(first->endJoint, 3, glm::radians(-45.0f), constraint));
 	third->update();
 
-	Segment leaf1 = Segment(second->endJoint, 5, glm::radians(-135.0f), constraint);
+	Segment leaf1 = Segment(second->endJoint, 2, glm::radians(-135.0f), constraint);
 	leaf1.update();
 	segmentTree.append_child(second, leaf1);
 
-	Segment leaf2 = Segment(second->endJoint, 6, glm::radians(-90.0f), constraint);
+	Segment leaf2 = Segment(second->endJoint, 4, glm::radians(-90.0f), constraint);
 	leaf2.update();
 	segmentTree.append_child(second, leaf2);
 
-	Segment leaf3 = Segment(second->endJoint, 7, glm::radians(-45.0f), constraint);
+	Segment leaf3 = Segment(second->endJoint, 2, glm::radians(-45.0f), constraint);
 	leaf3.update();
 	segmentTree.append_child(second, leaf3);
 
-	Segment leaf4 = Segment(third->endJoint, 8, glm::radians(-100.0f), constraint);
+	Segment leaf4 = Segment(third->endJoint, 4, glm::radians(-100.0f), constraint);
 	leaf4.update();
 	segmentTree.append_child(third, leaf4);
 
-	Segment leaf5 = Segment(third->endJoint, 9, glm::radians(-60.0f), constraint);
+	Segment leaf5 = Segment(third->endJoint, 4, glm::radians(-60.0f), constraint);
 	leaf5.update();
 	segmentTree.append_child(third, leaf5);
 }
@@ -426,29 +449,19 @@ void drawSplats(const int program, const float radius, const bool asLight) {
 		targets[i] = glm::vec3(homogenTarget.x, homogenTarget.y, homogenTarget.z);
 
 		sphere->draw();
-
-		//// Turn on wireframe mode
-		//glPolygonMode(GL_FRONT, GL_LINE);
-		//glPolygonMode(GL_BACK, GL_LINE);
-		//// Draw the box
-		//cylinder->draw();
-		//// Turn off wireframe mode
-		//glPolygonMode(GL_FRONT, GL_FILL);
-		//glPolygonMode(GL_BACK, GL_FILL);
-
 	}
 	glUseProgram(0);
 }
 
-void updateTestTriangle(vector<glm::vec3> triangles) {
-	tList = new triangleList(triangles);
-	tList->upload();
-}
-
-void updateTestTriangle2(vector<glm::vec3> triangles) {
-	tListTree = new triangleList(triangles);
-	tListTree->upload();
-}
+//void updateTestTriangle(vector<glm::vec3> triangles) {
+//	tList = new triangleList(triangles);
+//	tList->upload();
+//}
+//
+//void updateTestTriangle2(vector<glm::vec3> triangles) {
+//	tListTree = new triangleList(triangles);
+//	tListTree->upload();
+//}
 
 void init() {
 	glEnable(GL_TEXTURE_2D);
@@ -493,8 +506,8 @@ void init() {
 
 void display () {
 	
-	updateTestTriangle(ropeTriangles);
-	updateTestTriangle2(treeTriangles);
+	//updateTestTriangle(ropeTriangles);
+	//updateTestTriangle2(treeTriangles);
 
 	timer.update();
 	if (autoRotate)
@@ -526,54 +539,87 @@ void display () {
 	glPolygonMode(GL_BACK, GL_FILL);
 
 
-	if (drawRope == true) {
-		tList->draw();
-	}
-	if (drawTree == true) {
-		tListTree->draw();
-	}
-	glUseProgram(0);
+	//if (drawRope == true) {
+	//	tList->draw();
+	//}
+	//if (drawTree == true) {
+	//	tListTree->draw();
+	//}
+	//glUseProgram(0);
 
 	drawSplats(gbufferShader, 0.1f, false);
 
-	if (solveIK) {
-		
-		if (writeOnceToConsole) {
-			std::cout << "Before Using IK: " << std::endl;
-			for (int i = 0; i < segments.size(); i++) {
-				std::cout << "Segment: " << i << " start " << segments[i].startJoint.x << " " << segments[i].startJoint.y << " " << segments[i].startJoint.z << " " << std::endl;
-				std::cout << "Segment: " << i << " end " << segments[i].endJoint.x << " " << segments[i].endJoint.y << " " << segments[i].endJoint.z << " " << std::endl;
-				std::cout << "length: " << glm::length(segments[i].startJoint - segments[i].endJoint) << std::endl;
-			}
-		}
+	//if (solveIK) {
+	//	
+	//	if (writeOnceToConsole) {
+	//		std::cout << "Before Using IK: " << std::endl;
+	//		for (int i = 0; i < segments.size(); i++) {
+	//			std::cout << "Segment: " << i << " start " << segments[i].startJoint.x << " " << segments[i].startJoint.y << " " << segments[i].startJoint.z << " " << std::endl;
+	//			std::cout << "Segment: " << i << " end " << segments[i].endJoint.x << " " << segments[i].endJoint.y << " " << segments[i].endJoint.z << " " << std::endl;
+	//			std::cout << "length: " << glm::length(segments[i].startJoint - segments[i].endJoint) << std::endl;
+	//		}
+	//	}
 
-		for (int i = 0; i < stepsIK; i++) {
-			/*updateRope(targets[0]);
-			updateTestTree(targets);*/
-		}
+	//	for (int i = 0; i < stepsIK; i++) {
+	//		/*updateRope(targets[0]);
+	//		updateTestTree(targets);*/
+	//	}
 
-		if (writeOnceToConsole) {
-			std::cout << std::endl;
-			std::cout << "After Using IK: " << std::endl;
-			for (int i = 0; i < segments.size(); i++) {
-				std::cout << "Segment: " << i << " start " << segments[i].startJoint.x << " " << segments[i].startJoint.y << " " << segments[i].startJoint.z << " " << std::endl;
-				std::cout << "Segment: " << i << " end " << segments[i].endJoint.x << " " << segments[i].endJoint.y << " " << segments[i].endJoint.z << " " << std::endl;
-				std::cout << "length: " << glm::length(segments[i].startJoint - segments[i].endJoint) << std::endl;
-			}
-		}
-		writeOnceToConsole = false;
-	}
+	//	if (writeOnceToConsole) {
+	//		std::cout << std::endl;
+	//		std::cout << "After Using IK: " << std::endl;
+	//		for (int i = 0; i < segments.size(); i++) {
+	//			std::cout << "Segment: " << i << " start " << segments[i].startJoint.x << " " << segments[i].startJoint.y << " " << segments[i].startJoint.z << " " << std::endl;
+	//			std::cout << "Segment: " << i << " end " << segments[i].endJoint.x << " " << segments[i].endJoint.y << " " << segments[i].endJoint.z << " " << std::endl;
+	//			std::cout << "length: " << glm::length(segments[i].startJoint - segments[i].endJoint) << std::endl;
+	//		}
+	//	}
+	//	writeOnceToConsole = false;
+	//}
 
-	if (drawRope == true) {
-		/*drawCycleSegments(gbufferShader, 0.1f);*/
-	}
+	//if (drawRope == true) {
+	//	/*drawCycleSegments(gbufferShader, 0.1f);*/
+	//}
 
-	if (drawTree == true) {
-		/*drawTestTree(gbufferShader, 0.1f);*/
-	}
+	//if (drawTree == true) {
+	//	/*drawTestTree(gbufferShader, 0.1f);*/
+	//}
 
 	//FABRIK
-	fabrik->updateAndDraw(targets, gbufferShader, 0.1f, viewMatrix, projMatrix);
+	if (fabrikSolver) {
+		if(updateChain)
+			fabrik->updateChain(targets);
+		fabrik->drawChain(gbufferShader, 0.1f, viewMatrix, projMatrix);
+	}
+	else if (fabrikConeSolver) {
+		fabrik->changeConstraints(constraintCone);
+		if (updateChain)
+			fabrik->updateChainWithConstraints(targets);
+		fabrik->drawChain(gbufferShader, 0.1f, viewMatrix, projMatrix);
+		fabrik->drawConstraints(gbufferShader, viewMatrix, projMatrix);
+	}
+	else if (fabrikPlaneSolver) {
+		((PlaneConstraint*)constraintPlane)->setPlaneNormal(planeNormal);
+		fabrik->changeConstraints(constraintPlane);
+		if (updateChain)
+			fabrik->updateChainWithConstraints(targets);
+		fabrik->drawChain(gbufferShader, 0.1f, viewMatrix, projMatrix);
+	}
+	else if (fabrikPistonSolver) {
+		if (updateChain)
+			fabrik->updatePistonChain(targets, 10);
+		fabrik->drawChain(gbufferShader, 0.1f, viewMatrix, projMatrix);
+	}
+	else if(fabrikHingeSolver){
+		if (updateChain)
+			fabrik->updateHingeChain(targets, radiusHinge);
+		fabrik->drawChain(gbufferShader, 0.1f, viewMatrix, projMatrix);
+		fabrik->drawHingeConstraints(gbufferShader, viewMatrix, projMatrix, radiusHinge);
+	}
+	else {
+		fabrik->drawChain(gbufferShader, 0.1f, viewMatrix, projMatrix);
+	}
+	
 
 	gl_check_error("after splatting");
 
