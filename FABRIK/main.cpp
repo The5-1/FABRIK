@@ -93,10 +93,38 @@ float radiusHinge = 1.0f;
 Constraint *constraintCone = new ConeConstraint(M_PI / 6);
 Constraint *constraintPlane = new PlaneConstraint(planeNormal);
 
+
+//Model
+typedef enum { TREE1, TREE2, TREE3, HAND } MESH_TYPE;
+MESH_TYPE m_currentMesh = TREE1;
+bool changeMesh = false;
+//Target
+typedef enum { TARGET1, TARGET2} TARGET_TYPE;
+TARGET_TYPE m_currentTarget = TARGET1;
 void setupTweakBar() {
+	//WEB: http://ogldev.atspace.co.uk/www/tutorial48/tutorial48.html
 	TwInit(TW_OPENGL_CORE, NULL);
 	tweakBar = TwNewBar("Settings");
-	//TwBar *bar;
+	
+
+	// A variable for the current selection - will be updated by ATB
+	
+	// Array of drop down items
+	TwEnumVal Meshes[] = { { TREE1, "Tree1" },{ TREE2, "Tree2" }, { TREE3, "Tree3" }, { HAND, "Hand" } };
+	// ATB identifier for the array
+	TwType MeshTwType = TwDefineEnum("MeshType", Meshes, 4);
+	// Link it to the tweak bar
+	TwAddVarRW(tweakBar, "Mesh", MeshTwType, &m_currentMesh, NULL);
+	TwAddVarRW(tweakBar, "Change Mesh", TW_TYPE_BOOLCPP, &changeMesh, " label='Change Mesh' ");
+	//Seperator
+	TwAddSeparator(tweakBar, "", NULL);
+
+	//Target
+	TwEnumVal TargetsTw[] = { { TARGET1, "Target 1" },{ TARGET2, "Target 2" }};
+	TwType TargetTwType = TwDefineEnum("Targets", TargetsTw, 2);
+	TwAddVarRW(tweakBar, "Target", TargetTwType, &m_currentTarget, NULL);
+	TwAddSeparator(tweakBar, "", NULL);
+
 
 	TwAddVarRW(tweakBar, "No constraint", TW_TYPE_BOOLCPP, &fabrikSolver, " label='No constraint' ");
 	TwAddVarRW(tweakBar, "Cone", TW_TYPE_BOOLCPP, &fabrikConeSolver, " label='Cone' ");
@@ -107,6 +135,8 @@ void setupTweakBar() {
 	//TwAddVarRW(tweakBar, "Draw tree", TW_TYPE_BOOLCPP, &drawTree, " label='Draw tree' ");
 	//TwAddVarRW(tweakBar, "Use constraints", TW_TYPE_BOOLCPP, &useConstraints, " label='Use constraints' ");
 	//TwAddVarRW(tweakBar, "solveIK", TW_TYPE_BOOLCPP, &solveIK, " label='Solve IK' ");
+
+	TwAddSeparator(tweakBar, "", NULL);
 	TwAddVarRW(tweakBar, "Update chain", TW_TYPE_BOOLCPP, &updateChain, " label='Update chain' ");
 
 	TwAddVarRW(tweakBar, "planeNormal", TW_TYPE_DIR3F, &planeNormal, " label='Plane Normal'");
@@ -114,7 +144,7 @@ void setupTweakBar() {
 	TwAddVarRW(tweakBar, "radiusHinge", TW_TYPE_FLOAT, &radiusHinge, " label='radius Hinge' min=0 step=0.1 max=100 ");
 
 	TwAddVarRW(tweakBar, "stepsIK", TW_TYPE_INT32, &stepsIK, " label='Steps for IK' ");
-
+	TwAddSeparator(tweakBar, "", NULL);
 	TwAddVarRW(tweakBar, "Rotate", TW_TYPE_BOOLCPP, &autoRotate, " label='Rotate Target' ");
 	TwAddVarRW(tweakBar, "RotSpeed", TW_TYPE_FLOAT, &degreesPerSecond, " label='Rotation Speed' min=0 step=0.1 max=360 ");
 	TwAddVarRW(tweakBar, "SphereHeight", TW_TYPE_FLOAT, &sphereHeight, " label='Target height' min=0 step=0.1 max=100 ");
@@ -124,303 +154,164 @@ void setupTweakBar() {
 
 void initiateTestTree() {
 	Constraint *constraint = NULL;
-
-	tree<Segment>::iterator root = segmentTree.insert(segmentTree.begin(), Segment(glm::vec3(0, 0, 0), 3, glm::radians(-90.0f), constraint));
+	tree<Segment> createTree;
+	tree<Segment>::iterator root = createTree.insert(createTree.begin(), Segment(glm::vec3(0, 0, 0), 3, glm::radians(-90.0f), constraint));
 	root->update();
 
-	tree<Segment>::iterator first = segmentTree.append_child(root, Segment(root->endJoint, 3, glm::radians(-90.0f), constraint));
+	tree<Segment>::iterator first = createTree.append_child(root, Segment(root->endJoint, 3, glm::radians(-90.0f), constraint));
 	first->update();
 
-	tree<Segment>::iterator second = segmentTree.append_child(first, Segment(first->endJoint, 3, glm::radians(-135.0f), constraint));
+	tree<Segment>::iterator second = createTree.append_child(first, Segment(first->endJoint, 3, glm::radians(-135.0f), constraint));
 	second->update();
 
-	tree<Segment>::iterator third = segmentTree.append_child(first, Segment(first->endJoint, 3, glm::radians(-45.0f), constraint));
+	tree<Segment>::iterator third = createTree.append_child(first, Segment(first->endJoint, 3, glm::radians(-45.0f), constraint));
 	third->update();
 
 	Segment leaf1 = Segment(second->endJoint, 2, glm::radians(-135.0f), constraint);
 	leaf1.update();
-	segmentTree.append_child(second, leaf1);
+	createTree.append_child(second, leaf1);
 
 	Segment leaf2 = Segment(second->endJoint, 4, glm::radians(-90.0f), constraint);
 	leaf2.update();
-	segmentTree.append_child(second, leaf2);
+	createTree.append_child(second, leaf2);
 
 	Segment leaf3 = Segment(second->endJoint, 2, glm::radians(-45.0f), constraint);
 	leaf3.update();
-	segmentTree.append_child(second, leaf3);
+	createTree.append_child(second, leaf3);
 
 	Segment leaf4 = Segment(third->endJoint, 4, glm::radians(-100.0f), constraint);
 	leaf4.update();
-	segmentTree.append_child(third, leaf4);
+	createTree.append_child(third, leaf4);
 
 	Segment leaf5 = Segment(third->endJoint, 4, glm::radians(-60.0f), constraint);
 	leaf5.update();
-	segmentTree.append_child(third, leaf5);
+	createTree.append_child(third, leaf5);
+
+	segmentTree = createTree;
 }
 
-//void drawTestTree(const int program, const float radius) {
-//	glUseProgram(program);
-//	uniform(program, "viewMatrix", viewMatrix);
-//	uniform(program, "projMatrix", projMatrix);
-//
-//	tree<Segment>::breadth_first_iterator br = segmentTree.begin();
-//	while (br != segmentTree.end(segmentTree.begin())) {
-//		uniform(program, "color", glm::vec3(0, 1, 0));
-//		uniform(program, "modelMatrix", glm::translate(br->startJoint) * glm::scale(glm::mat4(), glm::vec3(radius, radius, radius)));
-//		sphere->draw();
-//
-//		if (br.number_of_children() == 0) {
-//			uniform(program, "color", glm::vec3(0, 1, 0));
-//			uniform(program, "modelMatrix", glm::translate(br->endJoint) * glm::scale(glm::mat4(), glm::vec3(radius, radius, radius)));
-//				
-//			sphere->draw();
-//		}
-//
-//		++br;
-//	}
-//	glUseProgram(0);
-//
-//	vector<glm::vec3> triangleJoints;
-//
-//	br = segmentTree.begin();
-//	int counter = 0;
-//	while (br != segmentTree.end(segmentTree.begin())) {
-//		glm::vec4 homogenTarget = (glm::translate(br->startJoint) * glm::scale(glm::mat4(), glm::vec3(radius, radius, radius))) * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-//		triangleJoints.push_back(glm::vec3(homogenTarget.x, homogenTarget.y, homogenTarget.z));
-//
-//		homogenTarget = (glm::translate(br->endJoint) * glm::scale(glm::mat4(), glm::vec3(radius, radius, radius))) * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-//		triangleJoints.push_back(glm::vec3(homogenTarget.x, homogenTarget.y, homogenTarget.z));
-//
-//		triangleJoints.push_back(0.5f*(triangleJoints[3 * counter] + triangleJoints[3 * counter]) + glm::vec3(0.0f, 0.2f, 0.0f));
-//
-//		counter++;
-//		++br;
-//	}
-//	treeTriangles = triangleJoints;
-//}
-//
-//void updateTestTree(vector<glm::vec3> targets) {
-//	glm::vec3 start = segmentTree.begin()->startJoint;
-//	int targetNr = 0;
-//
-//	//Forwards-Step
-//	tree<Segment>::leaf_iterator sibParent = segmentTree.begin_leaf();
-//	while (sibParent != segmentTree.end_leaf()) {
-//
-//		tree<Segment>::iterator parent = sibParent;
-//		while (parent != NULL) {
-//			parent->endJoint = targets[targetNr];
-//			parent->startJoint = parent->length * glm::normalize(parent->startJoint - parent->endJoint) + parent->endJoint;
-//
-//			targets[targetNr] = parent->startJoint;
-//
-//			parent = segmentTree.parent(parent);
-//		}
-//
-//		targetNr++;
-//		++sibParent;
-//	}
-//
-//	//Backwards-Step
-//	tree<Segment>::pre_order_iterator br = segmentTree.begin();
-//	while (br != segmentTree.end(segmentTree.begin())) {
-//		if (segmentTree.parent(br) == NULL) {
-//		}
-//		else {
-//			start = segmentTree.parent(br)->endJoint;
-//		}
-//		br->startJoint = start;
-//		br->endJoint = br->length * glm::normalize(br->endJoint - br->startJoint) + br->startJoint;
-//		++br;
-//	}
-//}
-//
-//void initiateRope() {	
-//	segments.push_back(Segment(glm::vec3(0, 0, 0), 5, glm::radians(45.0f)));
-//	segments[0].update();
-//
-//	segments.push_back(Segment(segments[0].endJoint, 5, 0));
-//	segments[1].update();
-//
-//	segments.push_back(Segment(segments[1].endJoint, 5, glm::radians(33.0f)));
-//	segments[2].update();
-//}
-//
-//void updateRope(glm::vec3 target) {
-//	int numberSegments = segments.size();
-//	glm::vec3 start = segments[0].startJoint;
-//
-//	//Distance-Criteria
-//	float sumDistance = 0;
-//	for (int i = 0; i <= numberSegments - 1; i++) {
-//		sumDistance += segments[i].length;
-//	}
-//
-//	//If Distance-Criteria fails, put joints on line to target
-//	if (sumDistance < glm::length(segments[0].startJoint - target)) {
-//		glm::vec3 direction = glm::normalize(target - segments[0].startJoint);
-//
-//		segments[0].endJoint = segments[0].startJoint + segments[0].length*direction;
-//
-//		for (int i = 1; i <= numberSegments - 1; i++) {
-//			segments[i].startJoint = segments[i - 1].endJoint;
-//			segments[i].endJoint = segments[i].startJoint + segments[i].length*direction;
-//		}
-//
-//		return;
-//	}
-//
-//	//Distance-Criteria succeeds
-//	//Forward-Step
-//	for (int i = numberSegments - 1; i >= 0; i--) {
-//		segments[i].endJoint = target;
-//		segments[i].startJoint = segments[i].length * glm::normalize(segments[i].startJoint - segments[i].endJoint) + segments[i].endJoint;
-//		target = segments[i].startJoint;
-//	}
-//
-//	//Backwards-Step
-//	for (int i = 0; i < numberSegments; i++) {
-//		
-//		if (i != 0 && useConstraints) {
-//			//ToDo: Cones in segments speichern
-//			float coneAngle = M_PI / 6;
-//
-//			glm::vec3 d = (segments[i - 1].endJoint - segments[i - 1].startJoint);
-//			//glm::vec3 d = glm::vec3(0.0f, 1.0f, 0.0f);
-//
-//
-//			segments[i].startJoint = start;
-//			segments[i].endJoint = segments[i].length * glm::normalize(segments[i].endJoint - segments[i].startJoint) + segments[i].startJoint;
-//			
-//
-//			//Sicherheitskopie
-//			/*
-//			//FABRIK
-//			segments[i].constraint = new ConeConstraint(M_PI / 6);
-//			start = segments[i].constraint->calcConstraintedPoint(segments[i].endJoint, segments[i], segments[i - 1]);
-//			*/
-//
-//			//Rotation
-//			glm::mat3x3 rotation = vectorToVectorRotation(glm::vec3(0.0f, 1.0f, 0.0f), d);
-//			d = rotation * glm::normalize(d);
-//			//d = glm::vec3(0.0f, 1.0f, 0.0f);
-//			//std::cout << "d ( " << d.x << ", " << d.y << ", " << d.z << ")" << std::endl;
-//
-//			//Projection
-//			//glm::vec3 c = (segments[i].endJoint - segments[i].startJoint);
-//			glm::vec3 c = rotation * (segments[i].endJoint - segments[i].startJoint);
-//			//std::cout << "c ( " << c.x << ", " << c.y << ", " << c.z << ")" << std::endl;
-//			float height = c.y;
-//			//std::cout << height << std::endl;
-//			float radius = height * glm::tan(coneAngle);
-//
-//			glm::vec3 p = glm::dot(c, d) * d;
-//			//std::cout << "p ( " << p.x << ", " << p.y << ", " << p.z << ")" << std::endl;
-//
-//			if (glm::dot(p, d) < 0) {
-//				p = -p;
-//			}
-//
-//			glm::vec3 z = c - p;
-//			//std::cout << "z ( " << z.x << ", " << z.y << ", " << z.z << ")" << std::endl;
-//
-//			if ((z.x*z.x) / (radius*radius) + (z.z*z.z) / (radius*radius) > 1) {
-//				//std::cout << " Outside of ellipse " << std::endl;
-//				float sigma = atan2(z.z, z.x);
-//				//float sigma = atan2(segments[i].endJoint.z, segments[i].endJoint.x);
-//				//float sigma = atan2(segments[i].endJoint.x, segments[i].endJoint.z);
-//
-//				p.x = radius * glm::cos(sigma);
-//				p.y = glm::abs(height);
-//				p.z = radius * glm::sin(sigma);
-//
-//				p = transpose(rotation) * p;
-//				//std::cout << "p ( " << p.x << ", " << p.y << ", " << p.z << ")" << std::endl;
-//				segments[i].endJoint = segments[i].startJoint + segments[i].length * glm::normalize(p);
-//			}
-//			
-//			start = segments[i].endJoint;
-//		}
-//		else {
-//			segments[i].startJoint = start;
-//			segments[i].endJoint = segments[i].length * glm::normalize(segments[i].endJoint - segments[i].startJoint) + segments[i].startJoint;
-//			start = segments[i].endJoint;
-//		}
-//	}
-//}
-//
-//void drawCycleSegments(const int program, const float radius) {
-//
-//	glUseProgram(program);
-//	uniform(program, "viewMatrix", viewMatrix);
-//	uniform(program, "projMatrix", projMatrix);
-//
-//	for (int i = 0; i < segments.size(); ++i) {
-//		uniform(program, "color", glm::vec3(1, 0, 0));
-//		uniform(program, "modelMatrix", glm::translate(segments[i].startJoint) * glm::scale(glm::mat4(), glm::vec3(radius, radius, radius)));
-//		sphere->draw();
-//	}
-//
-//	uniform(program, "modelMatrix", glm::translate(segments[segments.size()-1].endJoint) * glm::scale(glm::mat4(), glm::vec3(radius, radius, radius)));
-//
-//	sphere->draw();
-//
-//	glUseProgram(0);
-//
-//	//Draw Triangle between joints
-//	vector<glm::vec3> triangleJoints;
-//	for (int i = 0; i < segments.size(); i++) {
-//		glm::vec4 homogenTarget = (glm::translate(segments[i].startJoint) * glm::scale(glm::mat4(), glm::vec3(radius, radius, radius))) * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-//		triangleJoints.push_back(glm::vec3(homogenTarget.x, homogenTarget.y, homogenTarget.z));
-//
-//		homogenTarget = (glm::translate(segments[i].endJoint) * glm::scale(glm::mat4(), glm::vec3(radius, radius, radius))) * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-//		triangleJoints.push_back(glm::vec3(homogenTarget.x, homogenTarget.y, homogenTarget.z));
-//
-//		triangleJoints.push_back(0.5f*(triangleJoints[3*i] + triangleJoints[3 * i]) + glm::vec3(0.0f, 0.2f, 0.0f));	
-//	}
-//	ropeTriangles = triangleJoints;
-//
-//	//Draw Constraints
-//	glUseProgram(program);
-//	uniform(program, "viewMatrix", viewMatrix);
-//	uniform(program, "projMatrix", projMatrix);
-//
-//	uniform(program, "color", glm::vec3(1.0f, 0.5f, 0));
-//	for (int i = 0; i < triangleJoints.size()/3 - 1; i++) {
-//		
-//		glm::vec3 segmentAxis = triangleJoints[3 * i + 1] - triangleJoints[3 * i];
-//
-//		glm::mat3x3 r = vectorToVectorRotation(glm::vec3(0.0f, 1.0f, 0.0f), segmentAxis);
-//
-//		glm::mat4 translate = glm::translate(triangleJoints[3 * i + 1]);
-//
-//		glm::mat4 rotation = glm::mat4(r[0][0], r[0][1], r[0][2], 0,
-//										r[1][0], r[1][1], r[1][2], 0,
-//										r[2][0], r[2][1], r[2][2], 0,
-//										0, 0, 0, 1);
-//
-//		rotation = glm::transpose(rotation);
-//
-//		uniform(program, "modelMatrix", translate*rotation);
-//
-//		// Turn on wireframe mode
-//		glPolygonMode(GL_FRONT, GL_LINE);
-//		glPolygonMode(GL_BACK, GL_LINE);
-//		// Draw the box
-//		cone->draw();
-//		// Turn off wireframe mode
-//		glPolygonMode(GL_FRONT, GL_FILL);
-//		glPolygonMode(GL_BACK, GL_FILL);
-//	}
-//	glUseProgram(0);
-//}
+void initiateTestTree2() {
+	Constraint *constraint = NULL;
+	tree<Segment> createTree;
+	tree<Segment>::iterator root = createTree.insert(createTree.begin(), Segment(glm::vec3(0, 0, 0), 2, glm::radians(-90.0f), constraint));
+	root->update();
 
+	tree<Segment>::iterator first = createTree.append_child(root, Segment(root->endJoint, 2, glm::radians(-90.0f), constraint));
+	first->update();
 
+	tree<Segment>::iterator second = createTree.append_child(first, Segment(first->endJoint, 2, glm::radians(-135.0f), constraint));
+	second->update();
+
+	tree<Segment>::iterator third = createTree.append_child(second, Segment(second->endJoint, 2, glm::radians(-45.0f), constraint));
+	third->update();
+
+	Segment leaf1 = Segment(third->endJoint, 2, glm::radians(-135.0f), constraint);
+	leaf1.update();
+	createTree.append_child(third, leaf1);
+
+	Segment leaf2 = Segment(third->endJoint, 4, glm::radians(-90.0f), constraint);
+	leaf2.update();
+	createTree.append_child(third, leaf2);
+
+	Segment leaf3 = Segment(third->endJoint, 2, glm::radians(-45.0f), constraint);
+	leaf3.update();
+	createTree.append_child(third, leaf3);
+
+	Segment leaf4 = Segment(third->endJoint, 4, glm::radians(-100.0f), constraint);
+	leaf4.update();
+	createTree.append_child(third, leaf4);
+
+	Segment leaf5 = Segment(third->endJoint, 2, glm::radians(-60.0f), constraint);
+	leaf5.update();
+	createTree.append_child(third, leaf5);
+
+	segmentTree = createTree;
+}
+
+void initiateTestTree3() {
+	Constraint *constraint = NULL;
+	tree<Segment> createTree;
+
+	tree<Segment>::iterator root = createTree.insert(createTree.begin(), Segment(glm::vec3(0, 0, 0), glm::vec3(0, 2, 0), constraint));
+
+	tree<Segment>::iterator firstFinger1 = createTree.append_child(root, Segment(root->endJoint, glm::vec3(0, 4, 0), constraint));
+	tree<Segment>::iterator firstFinger2 = createTree.append_child(firstFinger1, Segment(firstFinger1->endJoint, glm::vec3(0, 6, 0), constraint));
+	tree<Segment>::iterator firstFinger3 = createTree.append_child(firstFinger2, Segment(firstFinger2->endJoint, glm::vec3(0, 8, 0), constraint));
+
+	Segment firstFinger4 = Segment(firstFinger3->endJoint, glm::vec3(0, 10, 0), constraint);
+	createTree.append_child(firstFinger3, firstFinger4);
+	segmentTree = createTree;
+}
+
+void handTree() {
+	float resizeArm = 4.0f;
+	float resizeFinger = 4.0f;
+	Constraint *constraint = NULL;
+	tree<Segment> createTree;
+
+	tree<Segment>::iterator root = createTree.insert(createTree.begin(), Segment(glm::vec3(0, 0, 0), resizeArm * glm::vec3(0, 1, 0), constraint));
+
+	tree<Segment>::iterator firstFinger1 = createTree.append_child(root, Segment(root->endJoint, resizeFinger*glm::vec3(-1.0, 1.5, 0), constraint));
+	tree<Segment>::iterator secondFinger1 = createTree.append_child(root, Segment(root->endJoint, resizeFinger*glm::vec3(-0.5, 1.5, 0), constraint));
+	tree<Segment>::iterator thirdFinger1 = createTree.append_child(root, Segment(root->endJoint, resizeFinger*glm::vec3(0, 1.5, 0), constraint));
+	tree<Segment>::iterator fourthFinger1 = createTree.append_child(root, Segment(root->endJoint, resizeFinger*glm::vec3(0.5, 1.5, 0), constraint));
+	//tree<Segment>::iterator fifthFinger1 = createTree.append_child(root, Segment(root->endJoint, resizeFinger*glm::vec3(0.5, 1.0, 0), constraint));
+	tree<Segment>::iterator fifthFinger1 = createTree.append_child(root, Segment(root->endJoint, resizeFinger*glm::vec3(0.8, 1.0, 0), constraint));
+
+	Segment firstFinger2 = Segment(firstFinger1->endJoint, resizeFinger*glm::vec3(-1.0, 2.5, 0), constraint);
+	createTree.append_child(firstFinger1, firstFinger2);
+	
+	Segment secondFinger2 = Segment(secondFinger1->endJoint, resizeFinger*glm::vec3(-0.5, 2.5, 0), constraint);
+	createTree.append_child(secondFinger1, secondFinger2);
+
+	Segment thirdFinger2 = Segment(thirdFinger1->endJoint, resizeFinger*glm::vec3(0, 2.5, 0), constraint);
+	createTree.append_child(thirdFinger1, thirdFinger2);
+
+	Segment fourthFinger2 = Segment(fourthFinger1->endJoint, resizeFinger*glm::vec3(0.5, 2.5, 0), constraint);
+	createTree.append_child(fourthFinger1, fourthFinger2);
+
+	//Segment fifthFinger2 = Segment(fifthFinger1->endJoint, resizeFinger*glm::vec3(0.5, 2.0, 0), constraint);
+	Segment fifthFinger2 = Segment(fifthFinger1->endJoint, resizeFinger*glm::vec3(1.4, 1.0, 0), constraint);
+	createTree.append_child(fifthFinger1, fifthFinger2);
+
+	segmentTree = createTree;
+}
+
+void handTreeLarge() {
+	float resizeArm = 4.0f;
+	float resizeFinger = 4.0f;
+	Constraint *constraint = NULL;
+	tree<Segment> createTree;
+
+	tree<Segment>::iterator root = createTree.insert(createTree.begin(), Segment(glm::vec3(0, 0, 0), resizeArm * glm::vec3(0, 1, 0), constraint));
+
+	tree<Segment>::iterator firstFinger1 = createTree.append_child(root, Segment(root->endJoint, resizeFinger*glm::vec3(-1.0, 1.5, 0), constraint));
+	tree<Segment>::iterator secondFinger1 = createTree.append_child(root, Segment(root->endJoint, resizeFinger*glm::vec3(-0.5, 1.5, 0), constraint));
+	tree<Segment>::iterator thirdFinger1 = createTree.append_child(root, Segment(root->endJoint, resizeFinger*glm::vec3(0, 1.5, 0), constraint));
+	tree<Segment>::iterator fourthFinger1 = createTree.append_child(root, Segment(root->endJoint, resizeFinger*glm::vec3(0.5, 1.5, 0), constraint));
+	tree<Segment>::iterator fifthFinger1 = createTree.append_child(root, Segment(root->endJoint, resizeFinger*glm::vec3(0.8, 1.0, 0), constraint));
+
+	Segment firstFinger2 = Segment(firstFinger1->endJoint, resizeFinger*glm::vec3(-1.0, 2.5, 0), constraint);
+	createTree.append_child(firstFinger1, firstFinger2);
+
+	Segment secondFinger2 = Segment(secondFinger1->endJoint, resizeFinger*glm::vec3(-0.5, 2.5, 0), constraint);
+	createTree.append_child(secondFinger1, secondFinger2);
+
+	Segment thirdFinger2 = Segment(thirdFinger1->endJoint, resizeFinger*glm::vec3(0, 2.5, 0), constraint);
+	createTree.append_child(thirdFinger1, thirdFinger2);
+
+	Segment fourthFinger2 = Segment(fourthFinger1->endJoint, resizeFinger*glm::vec3(0.5, 2.5, 0), constraint);
+	createTree.append_child(fourthFinger1, fourthFinger2);
+
+	Segment fifthFinger2 = Segment(fifthFinger1->endJoint, resizeFinger*glm::vec3(1.4, 1.0, 0), constraint);
+	createTree.append_child(fifthFinger1, fifthFinger2);
+
+	segmentTree = createTree;
+}
 
 float splatDistFromOrigin() {
 	return (cos(rotationAngle*0.7) + 1.0f) * 4.f + 1.0f;
 }
-
 
 void drawSplats(const int program, const float radius, const bool asLight) {
 
@@ -453,15 +344,65 @@ void drawSplats(const int program, const float radius, const bool asLight) {
 	glUseProgram(0);
 }
 
-//void updateTestTriangle(vector<glm::vec3> triangles) {
-//	tList = new triangleList(triangles);
-//	tList->upload();
-//}
-//
-//void updateTestTriangle2(vector<glm::vec3> triangles) {
-//	tListTree = new triangleList(triangles);
-//	tListTree->upload();
-//}
+void drawFingerSplats(const int program, const float radius, const bool asLight) {
+
+	float resizeFinger = 4.0f;
+	float r = 4; //10
+
+	glUseProgram(program);
+	uniform(program, "viewMatrix", viewMatrix);
+	uniform(program, "projMatrix", projMatrix);
+
+	glm::vec3 splatColors[6] = { glm::vec3(1, 0, 0),
+		glm::vec3(1, 1, 0),
+		glm::vec3(0, 1, 0),
+		glm::vec3(0, 1, 1),
+		glm::vec3(0, 0, 1),
+		glm::vec3(1, 0, 1) };
+
+	glm::vec3 fingers[5] = {
+		resizeFinger*glm::vec3(-1.0, 1.5, 0),
+		resizeFinger*glm::vec3(-0.5, 1.5, 0),
+		resizeFinger*glm::vec3(0, 1.5, 0),
+		resizeFinger*glm::vec3(0.5, 1.5, 0),
+		resizeFinger*glm::vec3(1.4, 1.0, 0)
+	};
+
+	float clampedAngle;
+	float y;
+	float z;
+
+	for (int i = 0; i < 4; ++i) {
+		//Angle in global variable: rotationAngle;
+		clampedAngle = glm::clamp(std::fmod(rotationAngle / 2, (0.8 * M_PI)), -2.0, -0.8);
+		std::cout << "clampedAngle: " << clampedAngle << std::endl;
+		y = r * cos(clampedAngle);
+		z = r * sin(clampedAngle);
+
+		fingers[i] -= glm::vec3(0.0f, y, z);
+
+		uniform(program, "color", splatColors[i]);
+		uniform(program, "modelMatrix", glm::translate(fingers[i]) * glm::scale(glm::mat4(), glm::vec3(radius, radius, radius)));
+
+		glm::vec4 homogenTarget = (glm::translate(fingers[i]) * glm::scale(glm::mat4(), glm::vec3(radius, radius, radius))) * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+
+		targets[i] = glm::vec3(homogenTarget.x, homogenTarget.y, homogenTarget.z);
+
+		sphere->draw();
+	}
+	//clampedAngle = glm::clamp(std::fmod(rotationAngle / 2, (0.8 * M_PI)), -2.0, -0.8);
+	//y = r * cos(clampedAngle);
+	//z = r * sin(clampedAngle);
+	//fingers[4] -= glm::vec3(0.0f, y, z);
+
+	//uniform(program, "color", splatColors[4]);
+	//uniform(program, "modelMatrix", glm::translate(fingers[4]) * glm::scale(glm::mat4(), glm::vec3(radius, radius, radius)));
+	//glm::vec4 homogenTarget = (glm::translate(fingers[4]) * glm::scale(glm::mat4(), glm::vec3(radius, radius, radius))) * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	//targets[4] = glm::vec3(homogenTarget.x, homogenTarget.y, homogenTarget.z);
+	//sphere->draw();
+
+	glUseProgram(0);
+}
 
 void init() {
 	glEnable(GL_TEXTURE_2D);
@@ -499,7 +440,6 @@ void init() {
 	cylinder->upload();
 
 	//Fabrik
-	/*initiateRope();*/
 	initiateTestTree();
 	fabrik = new FABRIK(segmentTree, targets);
 }
@@ -538,52 +478,35 @@ void display () {
 	glPolygonMode(GL_FRONT, GL_FILL);
 	glPolygonMode(GL_BACK, GL_FILL);
 
+	if (m_currentTarget == TARGET1) {
+		drawSplats(gbufferShader, 0.1f, false);
+	}
+	else if (m_currentTarget == TARGET2) {
+		drawFingerSplats(gbufferShader, 0.1f, false);
+	}
+	if (changeMesh) {
+		changeMesh = false;
+		if (m_currentMesh == TREE1) {
+			
+			initiateTestTree();
+			fabrik = new FABRIK(segmentTree, targets);
+		}
+		if (m_currentMesh == TREE2) {
 
-	//if (drawRope == true) {
-	//	tList->draw();
-	//}
-	//if (drawTree == true) {
-	//	tListTree->draw();
-	//}
-	//glUseProgram(0);
+			initiateTestTree2();
+			fabrik = new FABRIK(segmentTree, targets);
+		}
+		if (m_currentMesh == TREE3) {
 
-	drawSplats(gbufferShader, 0.1f, false);
+			initiateTestTree3();
+			fabrik = new FABRIK(segmentTree, targets);
+		}
+		if (m_currentMesh == HAND) {
 
-	//if (solveIK) {
-	//	
-	//	if (writeOnceToConsole) {
-	//		std::cout << "Before Using IK: " << std::endl;
-	//		for (int i = 0; i < segments.size(); i++) {
-	//			std::cout << "Segment: " << i << " start " << segments[i].startJoint.x << " " << segments[i].startJoint.y << " " << segments[i].startJoint.z << " " << std::endl;
-	//			std::cout << "Segment: " << i << " end " << segments[i].endJoint.x << " " << segments[i].endJoint.y << " " << segments[i].endJoint.z << " " << std::endl;
-	//			std::cout << "length: " << glm::length(segments[i].startJoint - segments[i].endJoint) << std::endl;
-	//		}
-	//	}
-
-	//	for (int i = 0; i < stepsIK; i++) {
-	//		/*updateRope(targets[0]);
-	//		updateTestTree(targets);*/
-	//	}
-
-	//	if (writeOnceToConsole) {
-	//		std::cout << std::endl;
-	//		std::cout << "After Using IK: " << std::endl;
-	//		for (int i = 0; i < segments.size(); i++) {
-	//			std::cout << "Segment: " << i << " start " << segments[i].startJoint.x << " " << segments[i].startJoint.y << " " << segments[i].startJoint.z << " " << std::endl;
-	//			std::cout << "Segment: " << i << " end " << segments[i].endJoint.x << " " << segments[i].endJoint.y << " " << segments[i].endJoint.z << " " << std::endl;
-	//			std::cout << "length: " << glm::length(segments[i].startJoint - segments[i].endJoint) << std::endl;
-	//		}
-	//	}
-	//	writeOnceToConsole = false;
-	//}
-
-	//if (drawRope == true) {
-	//	/*drawCycleSegments(gbufferShader, 0.1f);*/
-	//}
-
-	//if (drawTree == true) {
-	//	/*drawTestTree(gbufferShader, 0.1f);*/
-	//}
+			handTree();
+			fabrik = new FABRIK(segmentTree, targets);
+		}
+	}
 
 	//FABRIK
 	if (fabrikSolver) {

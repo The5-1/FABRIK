@@ -33,6 +33,8 @@ Segment::Segment(glm::vec3 _startJoint, float _length, float _angle, Constraint 
 Segment::Segment(glm::vec3 _startJoint, glm::vec3 _endJoint) {
 	this->startJoint = _startJoint;
 	this->endJoint = _endJoint;
+	this->length = glm::length(_startJoint - _endJoint);
+	this->basicLength = this->length;
 }
 
 Segment::Segment(glm::vec3 _startJoint, glm::vec3 _endJoint, Constraint * _constraint)
@@ -40,6 +42,8 @@ Segment::Segment(glm::vec3 _startJoint, glm::vec3 _endJoint, Constraint * _const
 	this->startJoint = _startJoint;
 	this->endJoint = _endJoint;
 	this->constraint = _constraint;
+	this->length = glm::length(_startJoint - _endJoint);
+	this->basicLength = this->length;
 }
 
 Segment::~Segment()

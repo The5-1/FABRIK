@@ -214,8 +214,8 @@ void FABRIK::updateChain(vector<glm::vec3> targets) {
 
 void FABRIK::updatePistonChain(vector<glm::vec3> targets, int iterations) {
 
-	float epsilon = 0.1;
-
+	/*float epsilon = 0.1;*/
+	float epsilon = 0.0f;
 
 
 	std::cout << "Piston: " << std::endl;
@@ -244,68 +244,43 @@ void FABRIK::updatePistonChain(vector<glm::vec3> targets, int iterations) {
 		tree<Segment>::pre_order_iterator iterEnd;
 
 		while (iter != chain.end(chain.begin())) {
-			//std::cout << iter->length << std::endl;
 
 			if (chain.child(iter, 0) == NULL) {
 				distanceToTarget = glm::length(iter->endJoint - targets[targetNr]);
 				iterEnd = iter;
-
+				
 				if (distanceToTarget > epsilon) {
 					while (chain.child(iterStart, 0) != NULL) {
-						//This chain will stop once we reach the leaf (there seems to be NO < operation for iterators)
+						//This chain will stop once we reach the leaf (there seems to be NO <= operation for iterators)
 						//To Fix this this code is continued at (*)
 						float clampedDistance = glm::clamp(distanceToTarget, 0.0f, iterStart->piston);
 						distanceToTarget -= clampedDistance;
 						iterStart->piston -= clampedDistance;
 						iterStart->length += clampedDistance;
+						std::cout << "iterStart->length: " << iterStart->length << std::endl;
 						++iterStart;
 					}
+
 					//Fix from (*)
 					float clampedDistance = glm::clamp(distanceToTarget, 0.0f, iterStart->piston);
 					iterStart->piston -= clampedDistance;
 					iterStart->length += clampedDistance;
-					std::cout << "	" << iterStart->length << std::endl;
+					std::cout << "iterStart->length: " << iterStart->length << std::endl;
 				}
+
+				updateChain(targets);
 
 				++iter;
 				iterStart = iter;
 			}
 			else {
+				updateChain(targets);
 				++iter;
 			}
 		}
 
-		//Forwards-Step
-		targetNr = 0;
-		tree<Segment>::leaf_iterator sibParent = chain.begin_leaf();
-		while (sibParent != chain.end_leaf()) {
-
-			tree<Segment>::iterator parent = sibParent;
-			while (parent != NULL) {
-				parent->endJoint = targets[targetNr];
-				parent->startJoint = parent->length * glm::normalize(parent->startJoint - parent->endJoint) + parent->endJoint;
-
-				targets[targetNr] = parent->startJoint;
-
-				parent = chain.parent(parent);
-			}
-
-			targetNr++;
-			++sibParent;
-		}
-
-		//Backwards-Step
-		tree<Segment>::pre_order_iterator br = chain.begin();
-		while (br != chain.end(chain.begin())) {
-			if (chain.parent(br) == NULL) {
-			}
-			else {
-				start = chain.parent(br)->endJoint;
-			}
-			br->startJoint = start;
-			br->endJoint = br->length * glm::normalize(br->endJoint - br->startJoint) + br->startJoint;
-			++br;
-		}
+		//Update FABRIK with the new lengths
+		updateChain(targets);
 	}
 }
 
@@ -431,6 +406,8 @@ void FABRIK::updateChainWithConstraints(vector<glm::vec3> targets) {
 
 void FABRIK::updateAndDraw(vector<glm::vec3> targets, const int program, const float radius, glm::mat4 V, glm::mat4 P)
 {
+	//Placeholder-Function to speed up Testing
+
 	////this->updatePistonChain(targets, 10);
 	////this->updateChainWithConstraints(targets);
 	//this->updateHingeChain(targets);
