@@ -159,6 +159,22 @@ protected:
 	GLuint vbo[3];
 };
 
+class solidEllipticCone
+{
+public:
+	solidEllipticCone(const int slicesPerQuarter, float width0, float width1, float width2, float width3);
+	~solidEllipticCone();
+	void upload();
+	void draw();
+protected:
+	glm::vec2 calc2dEllipse(float width, float height, float currentAngle);
+	vector<unsigned int> indices;
+	vector<glm::vec2> uvs; //Texture-Coordinates
+	vector<glm::vec3> vertices;
+	vector<glm::vec3> normals;
+	GLuint vbo[3];
+};
+
 class solidCylinder
 {
 public:

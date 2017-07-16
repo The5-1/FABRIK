@@ -851,6 +851,129 @@ void solidCone::draw() {
 	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 }
 
+//SolidEllipticCone
+solidEllipticCone::solidEllipticCone(const int slicesPerQuarter, float width0, float width1, float width2, float width3) {
+	/*
+							|width 1
+							|
+	width2 -----------------|--------- width 0
+							|
+							|
+							|
+							|width 3
+	
+	*/
+
+	float height = 1.0f;
+	glm::vec3 normalizedDir = glm::vec3(0.0f, 1.0f, 0.0f);
+	
+
+	float anglePerSlice = (0.5f * M_PI) / slicesPerQuarter;
+	float t = 0;
+
+	vertices.push_back(glm::vec3(0.0f));
+
+	glm::vec2 ellipse = calc2dEllipse(width0, width1, t);
+	vertices.push_back(glm::vec3(ellipse.x, height, ellipse.y));
+
+	int index = 2;
+
+	for (index; index < slicesPerQuarter + 2; index++) {
+		t += anglePerSlice;
+		ellipse = calc2dEllipse(width0, width1, t);
+		vertices.push_back(glm::vec3(ellipse.x, height, ellipse.y));
+
+		indices.push_back(index);
+		indices.push_back(index - 1);
+		indices.push_back(0);
+
+		normals.push_back(glm::cross((vertices[0] - vertices[index]), (vertices[0] - vertices[index - 1])));
+	}
+
+	for (index; index < 2*slicesPerQuarter + 2; index++) {
+		t += anglePerSlice;
+		ellipse = calc2dEllipse(width2, width1, t);
+		vertices.push_back(glm::vec3(ellipse.x, height, ellipse.y));
+
+		indices.push_back(index);
+		indices.push_back(index - 1);
+		indices.push_back(0);
+
+		normals.push_back(glm::cross((vertices[0] - vertices[index]), (vertices[0] - vertices[index - 1])));
+	}
+
+	for (index; index < 3 * slicesPerQuarter + 2; index++) {
+		t += anglePerSlice;
+		ellipse = calc2dEllipse(width2, width3, t);
+		vertices.push_back(glm::vec3(ellipse.x, height, ellipse.y));
+
+		indices.push_back(index);
+		indices.push_back(index - 1);
+		indices.push_back(0);
+
+		normals.push_back(glm::cross((vertices[0] - vertices[index]), (vertices[0] - vertices[index - 1])));
+	}
+
+	for (index; index < 4 * slicesPerQuarter + 2; index++) {
+		t += anglePerSlice;
+
+		ellipse = calc2dEllipse(width0, width3, t);
+
+		vertices.push_back(glm::vec3(ellipse.x, height, ellipse.y));
+		indices.push_back(index);
+		indices.push_back(index - 1);
+		indices.push_back(0);
+
+		normals.push_back(glm::cross((vertices[0] - vertices[index]), (vertices[0] - vertices[index - 1])));
+	}
+
+}
+
+void solidEllipticCone::upload() {
+	glGenBuffers(3, vbo);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float) * 3, vertices.data(), GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+	glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float) * 3, normals.data(), GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[2]);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+}
+
+void solidEllipticCone::draw() {
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glEnableVertexAttribArray(1);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[2]);
+	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+}
+
+glm::vec2 solidEllipticCone::calc2dEllipse(float width, float height, float currentAngle)
+{	
+	//Web: https://math.stackexchange.com/questions/22064/calculating-a-point-that-lies-on-an-ellipse-given-an-angle
+	float x = (width * height) / (glm::sqrt(height*height + width*width*glm::tan(currentAngle)*glm::tan(currentAngle)));
+	float y = (width * height * glm::tan(currentAngle)) / (glm::sqrt(height*height + width*width*glm::tan(currentAngle)*glm::tan(currentAngle)));
+	
+	//Clamp the angle to [0, 2*Pi]
+	currentAngle = glm::mod(currentAngle, 2.0f*(float)M_PI);
+
+	if ((currentAngle >= 0 && currentAngle <= M_PI / 2.0f) || (currentAngle >= 1.5f*M_PI && currentAngle <= 2.0f*M_PI)) {
+		//std::cout << "debug me 1" << std::endl;
+		return glm::vec2(x, y);
+	}
+	else {
+		//std::cout << "debug me 2" << std::endl;
+		return glm::vec2(-x, -y);
+	}
+}
+
 solidCylinder::solidCylinder(const int slices) {
 
 	//glm::vec3 normalizedDir = glm::normalize(direction);

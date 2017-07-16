@@ -33,6 +33,8 @@ private:
 
 	solidCircle* circleConstraintModel = new solidCircle(10);
 
+	solidEllipticCone* ellipticConstraintModel = new solidEllipticCone(5, 1.0f, 0.5f, 1.5f, 0.4f);
+
 public:
 	FABRIK(tree<Segment> _chain, std::vector<glm::vec3> _targets);
 	~FABRIK();
@@ -41,13 +43,14 @@ public:
 
 	//Utility
 	void changeConstraints(Constraint* _constraint);
+	void changeLastConstraints(Constraint * _constraint);
 	void updateNrLeafs();
 
 	//Draw
 	void drawChain(const int program, const float radius, glm::mat4 V, glm::mat4 P);
 	void FABRIK::drawHingeConstraints(const int program, glm::mat4 V, glm::mat4 P, float radius);
 	void FABRIK::drawConstraints(const int program, glm::mat4 V, glm::mat4 P);
-
+	void FABRIK::drawEllipticConstraints(const int program, glm::mat4 V, glm::mat4 P);
 	//Calculation
 	void updateChain(vector<glm::vec3> targets);
 	void updatePistonChain(vector<glm::vec3> targets, int iterations);

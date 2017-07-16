@@ -12,6 +12,7 @@ FABRIK::FABRIK(tree<Segment> _chain, std::vector<glm::vec3> _targets)
 	boneModel->upload();
 	coneConstraintModel->upload();
 	circleConstraintModel->upload();
+	ellipticConstraintModel->upload();
 }
 
 FABRIK::~FABRIK()
@@ -22,6 +23,19 @@ void FABRIK::changeConstraints(Constraint* _constraint) {
 	tree<Segment>::pre_order_iterator br = chain.begin();
 	while (br != chain.end(chain.begin())) {
 		br->constraint = _constraint;
+		++br;
+	}
+}
+
+void FABRIK::changeLastConstraints(Constraint* _constraint) {
+	tree<Segment>::pre_order_iterator br = chain.begin();
+	while (br != chain.end(chain.begin())) {
+		if (chain.child(br, 0) == NULL) {
+			br->constraint = _constraint;
+		}
+		else {
+			br->constraint = NULL;
+		}
 		++br;
 	}
 }
@@ -176,6 +190,51 @@ void FABRIK::drawConstraints(const int program, glm::mat4 V, glm::mat4 P) {
 	glUseProgram(0);
 }
 
+void FABRIK::drawEllipticConstraints(const int program, glm::mat4 V, glm::mat4 P) {
+	glUseProgram(program);
+	uniform(program, "viewMatrix", V);
+	uniform(program, "projMatrix", P);
+
+	uniform(program, "color", glm::vec3(1.0f, 0.5f, 0));
+
+	tree<Segment>::pre_order_iterator br = chain.begin();
+	while (br != chain.end(chain.begin())) {
+		if (chain.parent(br) == NULL || br->constraint == NULL) {
+		}
+		else {
+			//Draw Constraint
+			glm::vec3 segmentAxis = chain.parent(br)->endJoint - chain.parent(br)->startJoint;
+			//glm::vec3 segmentAxis = br->endJoint - br->startJoint;
+
+			glm::mat3x3 r = vectorToVectorRotation(glm::vec3(0.0f, 1.0f, 0.0f), segmentAxis);
+
+			glm::mat4 translate = glm::translate(br->startJoint);
+
+			glm::mat4 rotation = glm::mat4(r[0][0], r[0][1], r[0][2], 0,
+				r[1][0], r[1][1], r[1][2], 0,
+				r[2][0], r[2][1], r[2][2], 0,
+				0, 0, 0, 1);
+
+			rotation = glm::transpose(rotation);
+
+			uniform(program, "modelMatrix", translate*rotation);
+
+			// Turn on wireframe mode
+			glPolygonMode(GL_FRONT, GL_LINE);
+			glPolygonMode(GL_BACK, GL_LINE);
+
+			// Draw the box
+			ellipticConstraintModel->draw();
+
+			// Turn off wireframe mode
+			glPolygonMode(GL_FRONT, GL_FILL);
+			glPolygonMode(GL_BACK, GL_FILL);
+		}
+		++br;
+	}
+	glUseProgram(0);
+}
+
 void FABRIK::updateChain(vector<glm::vec3> targets) {
 	glm::vec3 start = chain.begin()->startJoint;
 	int targetNr = 0;
@@ -218,7 +277,7 @@ void FABRIK::updatePistonChain(vector<glm::vec3> targets, int iterations) {
 	float epsilon = 0.0f;
 
 
-	std::cout << "Piston: " << std::endl;
+	//std::cout << "Piston: " << std::endl;
 
 	glm::vec3 start = chain.begin()->startJoint;
 	int targetNr = 0;
@@ -249,6 +308,8 @@ void FABRIK::updatePistonChain(vector<glm::vec3> targets, int iterations) {
 				distanceToTarget = glm::length(iter->endJoint - targets[targetNr]);
 				iterEnd = iter;
 				
+				targetNr++;
+
 				if (distanceToTarget > epsilon) {
 					while (chain.child(iterStart, 0) != NULL) {
 						//This chain will stop once we reach the leaf (there seems to be NO <= operation for iterators)
@@ -257,7 +318,7 @@ void FABRIK::updatePistonChain(vector<glm::vec3> targets, int iterations) {
 						distanceToTarget -= clampedDistance;
 						iterStart->piston -= clampedDistance;
 						iterStart->length += clampedDistance;
-						std::cout << "iterStart->length: " << iterStart->length << std::endl;
+						//std::cout << "iterStart->length: " << iterStart->length << std::endl;
 						++iterStart;
 					}
 
@@ -265,7 +326,11 @@ void FABRIK::updatePistonChain(vector<glm::vec3> targets, int iterations) {
 					float clampedDistance = glm::clamp(distanceToTarget, 0.0f, iterStart->piston);
 					iterStart->piston -= clampedDistance;
 					iterStart->length += clampedDistance;
-					std::cout << "iterStart->length: " << iterStart->length << std::endl;
+					//std::cout << "iterStart->length: " << iterStart->length << std::endl;
+
+					//Quick-Fix Piston
+					//If we only want to allow to stretch the main arms up to the first target
+					//break;
 				}
 
 				updateChain(targets);
@@ -378,6 +443,26 @@ void FABRIK::updateChainWithConstraints(vector<glm::vec3> targets) {
 	}
 
 	//Backwards-Step
+	/*
+	tree<Segment>::pre_order_iterator br = chain.begin();
+	while (br != chain.end(chain.begin())) {
+		if (chain.parent(br) == NULL) {
+		}
+		else {
+			start = chain.parent(br)->endJoint;
+		}
+
+
+		br->startJoint = start;
+		br->endJoint = br->length * glm::normalize(br->endJoint - br->startJoint) + br->startJoint;
+
+		//Apply hinge constraint
+		if (chain.parent(br) != NULL && br->constraint != NULL) {
+			br->constraint->calcConstraintedPointReference(br->endJoint, *br, *chain.parent(br));
+		}
+		++br;
+	}
+	*/
 	tree<Segment>::pre_order_iterator br = chain.begin();
 	tree<Segment>::iterator parentBr;
 
@@ -397,7 +482,8 @@ void FABRIK::updateChainWithConstraints(vector<glm::vec3> targets) {
 
 		if (br->constraint != NULL && parentBr != NULL)
 		{
-			br->endJoint = br->constraint->calcConstraintedPoint(br->endJoint, *br, *parentBr);
+			//br->endJoint = br->constraint->calcConstraintedPoint(br->endJoint, *br, *parentBr);
+			br->constraint->calcConstraintedPointReference(br->endJoint, *br, *parentBr);
 		}
 		
 		++br;
